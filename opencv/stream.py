@@ -1,8 +1,12 @@
 import cv2
 import time
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
-RTSP_URL = "rtsp://192.168.244.47:554/mjpeg/1"
+local_ip = os.environ["LOCAL_IP"]
+
+RTSP_URL = f"rtsp://{local_ip}:554/mjpeg/1"
 SAVE_DIR = "captured_frames"
 os.makedirs(SAVE_DIR, exist_ok=True)
 
