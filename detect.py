@@ -1,11 +1,15 @@
 import cv2
 import torch
 from ultralytics import YOLO
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Load YOLOv8 model
-model = YOLO("yolov8n.pt")  # 'n' is the nano model, replace with 'm' or 'l' for better accuracy
+model = YOLO("yolov8n.pt")
 
-RTSP_URL = "rtsp://192.168.244.47:554/mjpeg/1"
+local_ip = os.environ["LOCAL_IP"]
+RTSP_URL = f"rtsp://{local_ip}:554/mjpeg/1"
 
 cap = cv2.VideoCapture(RTSP_URL)
 

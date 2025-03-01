@@ -3,12 +3,14 @@ import torch
 from ultralytics import YOLO
 import time
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Load YOLOv8 model
-model = YOLO("yolov8n.pt")  # Nano model, replace with 'm' or 'l' for better accuracy
+model = YOLO("yolov8n.pt")
 
-# RTSP Stream URL
-RTSP_URL = "rtsp://192.168.244.47:554/mjpeg/1"
+local_ip = os.environ["LOCAL_IP"]
+RTSP_URL = f"rtsp://{local_ip}:554/mjpeg/1"
 
 # Open the RTSP stream
 cap = cv2.VideoCapture(RTSP_URL)
@@ -18,7 +20,7 @@ if not cap.isOpened():
     exit()
 
 # Ensure the output directory exists
-output_dir = "captured_videos"
+output_dir = "output/captured_videos"
 os.makedirs(output_dir, exist_ok=True)
 
 # Video Writer (initially None)

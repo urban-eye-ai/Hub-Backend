@@ -1,21 +1,25 @@
 import cv2
 import time
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
-# Replace with your RTSP URL
-RTSP_URL = "rtsp://192.168.244.47:554/mjpeg/1"
+local_ip = os.environ["LOCAL_IP"]
+
+RTSP_URL = f"rtsp://{local_ip}:554/mjpeg/1"
 SAVE_DIR = "captured_frames"
-
-# Create the directory if it doesn't exist
 os.makedirs(SAVE_DIR, exist_ok=True)
 
-# Open the RTSP stream
-cap = cv2.VideoCapture(RTSP_URL)
-
-print('capturing')
-
-if not cap.isOpened():
-    print("Error: Could not open RTSP stream.")
+# Try opening the stream multiple times
+for i in range(5):
+    cap = cv2.VideoCapture(RTSP_URL, cv2.CAP_FFMPEG)
+    time.sleep(2)  # Wait for 2 seconds
+    if cap.isOpened():
+        print("RTSP Stream Opened Successfully!")
+        break
+    print(f"Retrying to open stream... ({i+1}/5)")
+else:
+    print("Error: Could not open RTSP stream after multiple attempts.")
     exit()
 
 frame_count = 0
@@ -27,15 +31,11 @@ while True:
         print("Error: Could not read frame.")
         break
 
-    # Save the frame every 10 seconds
-    frame_filename = os.path.join(SAVE_DIR, f"frame_{frame_count}.jpg")
-    cv2.imwrite(frame_filename, frame)
-    print(f"Captured: {frame_filename}")
-
-    frame_count += 1
-
-    # Wait for 10 seconds before capturing the next frame
-    time.sleep(10)
+    cv2.imshow('VIDEO', frame)
+    
+    # Press 'q' to exit
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
 
 cap.release()
 cv2.destroyAllWindows()

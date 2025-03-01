@@ -3,11 +3,15 @@ import time
 import threading
 import torch
 from ultralytics import YOLO
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
 # Load YOLOv8 model
 model = YOLO("yolov8n.pt")
 
-RTSP_URL = "rtsp://192.168.244.47:554/mjpeg/1"
+local_ip = os.environ["LOCAL_IP"]
+RTSP_URL = f"rtsp://{local_ip}:554/mjpeg/1"
 
 cap = cv2.VideoCapture(RTSP_URL)
 
@@ -59,7 +63,7 @@ while True:
 
         # Start recording if not already started
         if not recording:
-            filename = f"captured_videos/recorded_{int(time.time())}.mp4"
+            filename = f"output/captured_videos/recorded_{int(time.time())}.mp4"
             out = cv2.VideoWriter(filename, fourcc, 30, (frame.shape[1], frame.shape[0]))
             recording = True
 
