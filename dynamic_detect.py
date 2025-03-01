@@ -1,89 +1,76 @@
 import cv2
-import time
-import threading
 import torch
 from ultralytics import YOLO
+import time
+import os
 
 # Load YOLOv8 model
-model = YOLO("yolov8n.pt")
+model = YOLO("yolov8n.pt")  # Nano model, replace with 'm' or 'l' for better accuracy
 
+# RTSP Stream URL
 RTSP_URL = "rtsp://192.168.244.47:554/mjpeg/1"
 
+# Open the RTSP stream
 cap = cv2.VideoCapture(RTSP_URL)
 
 if not cap.isOpened():
     print("Error: Could not open RTSP stream.")
     exit()
 
-latest_frame = None
-recording = False
-last_detected_time = 0
-slow_mode = True
-lock = threading.Lock()
+# Ensure the output directory exists
+output_dir = "captured_videos"
+os.makedirs(output_dir, exist_ok=True)
 
 # Video Writer (initially None)
 fourcc = cv2.VideoWriter_fourcc(*"mp4v")
 out = None
 
-# Thread to continuously fetch the latest frame
-def update_frame():
-    global latest_frame
-    while True:
-        ret, frame = cap.read()
-        if ret:
-            with lock:
-                latest_frame = frame  # Update with latest frame
-        time.sleep(0.1)
-
-# Start frame update thread
-threading.Thread(target=update_frame, daemon=True).start()
+recording = False
+last_detected_time = 0
 
 while True:
-    time.sleep(30 if slow_mode else 0.1)
+    ret, frame = cap.read()
+    
+    if not ret:
+        print("Error: Could not read frame.")
+        break
 
-    with lock:
-        if latest_frame is None:
-            continue  # Skip if no frame available yet
-        frame = latest_frame.copy()
-
-    # Run YOLOv8 detection
-    results = model(frame)[0]
-
+    # Run YOLOv8 Object Detection
+    results = model(frame)[0]  # Get first batch result
+    
     # Check if a person is detected
     person_detected = any(model.names[int(box.cls[0])] == "person" for box in results.boxes)
 
     if person_detected:
         print("👀 Person detected! Starting real-time recording...")
         last_detected_time = time.time()
-        slow_mode = False  # Switch to continuous mode
 
         # Start recording if not already started
         if not recording:
-            filename = f"captured_videos/recorded_{int(time.time())}.mp4"
+            filename = os.path.join(output_dir, f"recorded_{int(time.time())}.mp4")
             out = cv2.VideoWriter(filename, fourcc, 30, (frame.shape[1], frame.shape[0]))
             recording = True
 
-    elif recording:
-        # Stop recording if no person seen for 30s
-        if time.time() - last_detected_time > 30:
-            print("🛑 No person detected for 30s. Stopping recording...")
-            recording = False
-            slow_mode = True  # Return to slow mode
-            if out:
-                out.release()
-                out = None
+    # Stop recording if no person seen for 15 seconds
+    elif recording and (time.time() - last_detected_time > 15):
+        print("🛑 No person detected for 15s. Stopping recording...")
+        recording = False
+        if out:
+            out.release()
+            out = None
 
     # Save frame if recording
     if recording and out:
         out.write(frame)
 
-    # Show video with detection
+    # Display the Stream with Detections
     cv2.imshow("RTSP Object Detection", frame)
 
     # Exit on 'q' key
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+# Release resources
 cap.release()
 if out:
     out.release()
