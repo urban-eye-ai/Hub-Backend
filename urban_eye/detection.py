@@ -1,9 +1,8 @@
 
 import torch
 
-MODEL_PATH = "cars.pt"
-CONF_THRESHOLD = 0.25
-IOU_THRESHOLD = 0.45
+CONF_THRESHOLD = 0.1
+IOU_THRESHOLD = 0.1
 
 class DetectionModel:
     def __init__(self, model_name: str):
