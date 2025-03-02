@@ -1,8 +1,8 @@
 
 import torch
 
-CONF_THRESHOLD = 0.1
-IOU_THRESHOLD = 0.1
+CONF_THRESHOLD = 0.3
+IOU_THRESHOLD = 0.5
 
 class DetectionModel:
     def __init__(self, model_name: str):
