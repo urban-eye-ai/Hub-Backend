@@ -15,5 +15,27 @@ def traffic_alert():
 
     return Response(xml_response, mimetype="text/xml")
 
+@app.post("/alerts/crowd")
+def crowd_alert():
+    location = request.args.get("location", "an unknown location")
+    message = f"Alert! There is crowd at {location}. Please send police to the site as soon as possible."
+
+    xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <Say voice="alice">{message}</Say>
+    </Response>"""
+
+@app.post("/alerts/garbage")
+def garbage_alert():
+    location = request.args.get("location", "an unknown location")
+    message = f"Alert! There is garbage overflow at {location}. Please send workers to the site as soon as possible."
+
+    xml_response = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <Say voice="alice">{message}</Say>
+    </Response>"""
+
+    return Response(xml_response, mimetype="text/xml")
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)

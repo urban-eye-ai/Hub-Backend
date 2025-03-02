@@ -2,15 +2,16 @@
 import os
 import cv2
 from dotenv import load_dotenv
-from ultralytics import YOLO
 
+from urban_eye.detection import DetectionModel
 from urban_eye.mqtt import MQTT
 
 load_dotenv() # Load environment variables
 
 rstp_uri = os.environ["RTSP_URI"]
 
-yolo = YOLO("yolov8n.pt")
+shouldDetectTrafficAndCrowd = False
+model = DetectionModel("cars.pt" if shouldDetectTrafficAndCrowd else "garbage.pt")
 mqtt_broker = MQTT()
 
 if __name__ == "__main__":
@@ -25,21 +26,50 @@ if __name__ == "__main__":
         exit()
 
     while True:
-        ret, frame = cap.read()    
+        ret, frame = cap.read()
         if not ret:
             print("Error: Could not read frame.")
             break
 
-        results = yolo(frame)[0]
+        results = model.detect(frame)
+        results.render()
 
-        for box in results.boxes:
-            x1, y1, x2, y2 = map(int, box.xyxy[0])
-            label = yolo.names[int(box.cls[0])]
-            conf = box.conf[0].item()
-            
-            cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+        detections = results.pandas().xyxy[0]
+        detection_list = []
+
+        if shouldDetectTrafficAndCrowd:
+            people = 0
+            vehicles = 0
+
+            for _, det in detections.iterrows():
+                if det['name'] == 'person':
+                    people += 1
+                else:
+                    vehicles += 1
+                detection_list.append({
+                    'class': det['name'],
+                    'confidence': float(det['confidence']),
+                    'bbox': [
+                        float(det['xmin']), 
+                        float(det['ymin']), 
+                        float(det['xmax']),
+                        float(det['ymax'])
+                    ]
+                })
+
+            if vehicles >= 10:
+                mqtt_broker.channel.basic_publish(exchange='traffic_alerts', routing_key='', body='Karve Nagar')
+
+            if people >= 20:
+                mqtt_broker.channel.basic_publish(exchange='crowd_alerts', routing_key='', body='Karve Nagar')
+        
+        else:
+            items = 0
+            for _, det in detections.iterrows():
+                if det['name'] == 'garbage':
+                    items += 1
+            if items != 0:
+                mqtt_broker.channel.basic_publish(exchange='garbage_alerts', routing_key='', body='Karve Nagar')
 
         cv2.imshow('VIDEO', frame)
         
